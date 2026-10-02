@@ -9,5 +9,5 @@ terraform {
 }
 
 provider "aws" {
-  region = "eu-north-1" # Или твой привычный регион
+  region = "eu-north-1" 
 }
