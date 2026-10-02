@@ -6,7 +6,7 @@ resource "aws_ecr_repository" "app_repo" {
   name                 = "${var.app_name}-${var.environment}"
   image_tag_mutability = "MUTABLE"
 
-  # Автоматическое сканирование образа на уязвимости (CVE) при каждом push
+  
   image_scanning_configuration {
     scan_on_push = true
   }
@@ -21,10 +21,10 @@ resource "aws_ecr_repository" "app_repo" {
 # CLOUDWATCH LOG GROUP FOR CONTAINER LOGS
 # ==========================================
 
-# ECS будет отправлять сюда stdout/stderr логов из контейнера
+
 resource "aws_cloudwatch_log_group" "ecs_logs" {
   name              = "/ecs/${var.app_name}-${var.environment}"
-  retention_in_days = 7 # Хранить логи 7 дней, чтобы не переплачивать за дисковое пространство
+  retention_in_days = 7 
 
   tags = {
     Environment = var.environment
@@ -36,7 +36,7 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
 # IAM EXECUTION ROLE FOR ECS
 # ==========================================
 
-# ECS Task Execution Role позволяет AWS забирать образ из ECR и отправлять логи в CloudWatch
+
 data "aws_iam_policy_document" "ecs_task_execution_assume_role" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -62,7 +62,7 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
 # NETWORKING (DEFAULT VPC & SECURITY GROUP)
 # ==========================================
 
-# Используем стандартную VPC для простоты
+# Using default VPC
 data "aws_vpc" "default" {
   default = true
 }
@@ -74,7 +74,7 @@ data "aws_subnets" "default" {
   }
 }
 
-# Security Group для закрытия/открытия портов контейнера
+# Security Group for opening/closing ports
 resource "aws_security_group" "ecs_sg" {
   name        = "${var.app_name}-ecs-sg-${var.environment}"
   description = "Allow HTTP inbound traffic for ECS task"
@@ -105,12 +105,12 @@ resource "aws_security_group" "ecs_sg" {
 # ECS CLUSTER, TASK DEFINITION & SERVICE
 # ==========================================
 
-# 1. ECS Кластер (логическая группа для работы контейнеров)
+# 1. ECS Кластер 
 resource "aws_ecs_cluster" "main" {
   name = "${var.app_name}-cluster-${var.environment}"
 }
 
-# 2. Task Definition (спецификация: сколько CPU/RAM выдать, какой Docker-образ брать)
+# 2. Task Definition (Stand for how many CPU/RAM to let, which Docker-file to open)
 resource "aws_ecs_task_definition" "app_task" {
   family                   = "${var.app_name}-task-${var.environment}"
   network_mode             = "awsvpc"
@@ -142,7 +142,7 @@ resource "aws_ecs_task_definition" "app_task" {
   ])
 }
 
-# 3. ECS Service (контроллер, который следит, чтобы контейнер всегда был запущен)
+# 3. ECS Service (controller that watching the container is always runnig)
 resource "aws_ecs_service" "app_service" {
   name            = "${var.app_name}-service-${var.environment}"
   cluster         = aws_ecs_cluster.main.id
@@ -156,7 +156,7 @@ resource "aws_ecs_service" "app_service" {
     assign_public_ip = true
   }
     
-  # ДОБАВЛЯЕМ ЭТОТ БЛОК:
+  
   load_balancer {
     target_group_arn = aws_lb_target_group.app_tg.arn
     container_name   = var.app_name
@@ -170,7 +170,7 @@ resource "aws_ecs_service" "app_service" {
 # APPLICATION LOAD BALANCER (ALB)
 # ==========================================
 
-# 1. Сам балансировщик нагрузки
+# 1. Load balancer
 resource "aws_lb" "main" {
   name               = "${var.app_name}-alb-${var.environment}"
   internal           = false
@@ -184,13 +184,13 @@ resource "aws_lb" "main" {
   }
 }
 
-# 2. Target Group (группа назначения для Fargate)
+# 2. Target Group (group for Fargate)
 resource "aws_lb_target_group" "app_tg" {
   name        = "${var.app_name}-tg-${var.environment}"
   port        = 80
   protocol    = "HTTP"
   vpc_id      = data.aws_vpc.default.id
-  target_type = "ip" # Для Fargate обязательно указывается тип 'ip'
+  target_type = "ip" # Fargate must have the type of 'ip'
 
   health_check {
     path                = "/"
@@ -202,7 +202,7 @@ resource "aws_lb_target_group" "app_tg" {
   }
 }
 
-# 3. ALB Listener (приемник HTTP трафика)
+# 3. ALB Listener (HTTP trafic)
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
